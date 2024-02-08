@@ -6,11 +6,15 @@ from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC, error
 import requests
 from dotenv import load_dotenv
+import paramiko
 
 load_dotenv()
 
 SPOTIPY_CLIENT_ID = os.getenv("SPOTIPY_CLIENT_ID")
 SPOTIPY_CLIENT_SECRET = os.getenv("SPOTIPY_CLIENT_SECRET")
+local_dir_variable = os.getenv("local_dir")
+remote_dir_variable = os.getenv("remote_dir")
+audio_filename = None
 
 def search_spotify(track_name):
     sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
@@ -46,11 +50,16 @@ def add_album_art(audio_filename):
             )
         )
         audio_file.save()
-        print("Album art added to the MP3 file.")
+        try:
+            os.remove("album_art.jpg")
+        except:
+            print("No artwork found")
+        print("Album art added to the MP3 file and album_art.jpeg deleted.")
     except error:
         print("Failed to add album art to the MP3 file.")
 
 def download_audio(url):
+    global audio_filename
     ydl_opts = {
         'format': 'bestaudio/best',
         'postprocessors': [{
@@ -74,6 +83,23 @@ def download_audio(url):
         else:
             print("Album art not found.")
 
+def connect_ssh(user, host, password):
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        ssh.connect(hostname=host, port=8022, username=user, password=password)
+        sftp = ssh.open_sftp()
+        local_dir = local_dir_variable + audio_filename
+        remote_dir = remote_dir_variable + audio_filename
+        sftp.put(local_dir, remote_dir)
+        print("Succesfully transfered file!")
+    except paramiko.AuthenticationException:
+        print("Failed to login. Verify username/password")
+    finally:
+        ssh.close()
+
 if __name__ == "__main__":
-    url = input("Zadejte URL adresu YouTube videa: ")
+    url = input("URL of Youtube video: ")
     download_audio(url)
+    local_file = audio_filename
+    connect_ssh(os.getenv("user"), os.getenv("host"), os.getenv("password"))
