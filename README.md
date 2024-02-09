@@ -24,7 +24,7 @@
 | `host` | `string` | SSH host name |
 | `user` | `string` | SSH user name |
 | `password` | `string` | SSH password |
-| `local_dir` | `string` | Local directory where is file downloaded, e.g. C:\\Music\\ |
+| `local_dir` | `string` | Local directory where is file downloaded, e.g. C:\\\Music\\\ |
 | `remote_dir` | `string` | Remote directory where is file downloaded, e.g. storage/music/ |
 
 
