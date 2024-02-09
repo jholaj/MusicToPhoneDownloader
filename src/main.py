@@ -3,7 +3,7 @@ import yt_dlp
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from mutagen.mp3 import MP3
-from mutagen.id3 import ID3, APIC, error
+from mutagen.id3 import ID3, APIC, TPE1, TALB, error
 import requests
 from dotenv import load_dotenv
 import paramiko
@@ -31,30 +31,30 @@ def search_spotify(track_name):
 def download_album_art(album_art_url):
     response = requests.get(album_art_url)
     if response.status_code == 200:
-        with open("album_art.jpg", 'wb') as image_file:
-            image_file.write(response.content)
-            print("Album art downloaded successfully.")
+        return response.content
     else:
         print("Failed to download album art.")
+        return None
 
-def add_album_art(audio_filename):
+def add_metadata(audio_filename, album_art_content, artist_name, album_name):
     try:
-        audio_file = MP3(audio_filename, ID3=ID3)
-        audio_file.tags.add(
-            APIC(
-                encoding=3,  # 3 = UTF-8
-                mime='image/jpeg',
-                type=3,  # 3 = album front cover
-                desc=u'Cover',
-                data=open("album_art.jpg", 'rb').read()  # Album art file
+        if album_art_content:
+            audio_file = MP3(audio_filename, ID3=ID3)
+            audio_file.tags.add(
+                APIC(
+                    encoding=3,  # 3 = UTF-8
+                    mime='image/jpeg',
+                    type=3,  # 3 = album front cover
+                    desc=u'Cover',
+                    data=album_art_content  # Použijeme obsah obrazu
+                )
             )
-        )
-        audio_file.save()
-        try:
-            os.remove("album_art.jpg")
-        except:
-            print("No artwork found")
-        print("Album art added to the MP3 file and album_art.jpeg deleted.")
+            audio_file.tags.add(TPE1(encoding=3, text=artist_name))  
+            audio_file.tags.add(TALB(encoding=3, text=album_name))   
+            audio_file.save()
+            print("Album art, artist name, and album name added to the MP3 file.")
+        else:
+            print("No album art found")
     except error:
         print("Failed to add album art to the MP3 file.")
 
@@ -71,15 +71,19 @@ def download_audio(url):
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=False)
         track_name = info['title']
+        audio_filename_temp = f"{os.path.splitext(ydl.prepare_filename(info))[0]}.mp3" # getting rid of webm name
+        audio_filename = f"{track_name}.mp3"
+        ydl.download([url])
         album_name, artist_name, album_art_url = search_spotify(track_name)
+        try:
+            os.rename(audio_filename_temp, audio_filename) # yt_dlp adds url at the end of filename
+        except:
+            print("Already renamed!")
         if album_art_url:
             print(f"Album: {album_name}\nArtist: {artist_name}")
-            audio_filename, audio_file_extension = os.path.splitext(ydl.prepare_filename(info))
-            audio_filename += ".mp3"            
-            ydl.download([url])
-
-            download_album_art(album_art_url)
-            add_album_art(audio_filename)
+            print(audio_filename)       
+            album_art_content = download_album_art(album_art_url) 
+            add_metadata(audio_filename, album_art_content, artist_name, album_name)
         else:
             print("Album art not found.")
 
