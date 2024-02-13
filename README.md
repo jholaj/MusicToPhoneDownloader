@@ -2,7 +2,8 @@
 # Music to Phone Downloader
 
 - Downloads .mp3 from YouTube URL
-- If found on Spotify, assign metadata 
+- If found on Spotify, assign metadata
+- Transfer file via SSH to phone ([Setup](https://gist.github.com/raveenb/ab3217798c827be889b83b584d70b08b))
 
 
 ## Prerequisites
